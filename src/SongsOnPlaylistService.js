@@ -6,30 +6,34 @@ class SongsOnPlaylistService {
   }
 
   async getSongsOnPlaylistById(playlistId) {
-    const query = {
-        text: `
-            SELECT 
-                playlists.id AS playlist_id, 
-                playlists.name AS playlist_name, 
-                songs.id AS song_id, 
-                songs.title AS song_title, 
-                songs.performer AS song_performer
-            FROM playlists
-            LEFT JOIN playlist_songs ON playlist_songs.playlist_id = playlists.id
-            LEFT JOIN songs ON playlist_songs.song_id = songs.id
-            WHERE playlists.id = $1
-        `,
-        values: [playlistId],
+     const playlistQuery = {
+      text: "SELECT id, name FROM playlists WHERE id = $1",
+      values: [playlistId],
     };
 
-    const result = await this._pool.query(query);
+    const playlistResult = await this._pool.query(playlistQuery);
+    const playlist = playlistResult.rows[0];
 
-    if (!result.rowCount) {
-        return "terdapat kesalahan saat mengeksekusi kueri";
-    }
+    const songsQuery = {
+      text: `SELECT songs.id, songs.title, songs.performer 
+             FROM playlist_songs
+             LEFT JOIN songs ON playlist_songs.song_id = songs.id
+             WHERE playlist_songs.playlist_id = $1`,
+      values: [playlistId],
+    };
 
-    return result.rows;
+    const songsResult = await this._pool.query(songsQuery);
+    const songs = songsResult.rows;
+
+    const result = {
+      id: playlist.id,
+      name: playlist.name,
+      songs,
+    };
+
+    return result;
   }
+
 
 }
 
